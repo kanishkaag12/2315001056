@@ -522,3 +522,170 @@ await Log(
   "Slow query detected"
 );
 ```
+
+
+
+# Stage 4
+
+## Problem
+
+Notifications are being fetched from the database on every page load.
+
+Issues:
+
+- High database load
+- Increased API latency
+- Poor user experience
+- Reduced scalability
+
+---
+
+## Proposed Solution
+
+### 1. Redis Caching
+
+Store recent notifications in Redis.
+
+Flow:
+
+1. Check Redis cache
+2. Return data if found
+3. Otherwise fetch from DB
+4. Store result in Redis
+
+Benefits:
+
+- Sub-millisecond reads
+- Reduced DB load
+
+Tradeoff:
+
+- Additional infrastructure
+- Cache invalidation complexity
+
+---
+
+### 2. Real-Time Push Notifications
+
+Use WebSockets or Server-Sent Events (SSE).
+
+Instead of polling:
+
+- Server pushes notifications instantly
+- Users receive updates in real time
+
+Benefits:
+
+- Better user experience
+- Fewer API requests
+
+Tradeoff:
+
+- Persistent connections
+- More memory consumption
+
+---
+
+### 3. Pagination
+
+Instead of loading all notifications:
+
+```http
+GET /api/notifications?page=1&limit=20
+```
+
+Benefits:
+
+- Smaller payloads
+- Faster queries
+
+Tradeoff:
+
+- Additional client-side handling
+
+---
+
+### 4. Read Replicas
+
+Use read replicas for notification retrieval.
+
+Benefits:
+
+- Distributes read traffic
+- Better scalability
+
+Tradeoff:
+
+- Slight replication lag
+
+---
+
+### 5. Background Processing
+
+Use message queues:
+
+- RabbitMQ
+- Kafka
+
+Benefits:
+
+- Asynchronous processing
+- Better throughput
+
+Tradeoff:
+
+- Additional system complexity
+
+---
+
+## Recommended Architecture
+
+Client
+↓
+Redis Cache
+↓
+Read Replica
+↓
+Primary Database
+
+Real-time updates delivered using WebSockets.
+
+---
+
+## Performance Improvement
+
+Current:
+
+- Every page load hits DB
+
+Proposed:
+
+- Cache first
+- Real-time updates
+- Paginated retrieval
+
+Result:
+
+- Lower DB load
+- Faster response times
+- Improved scalability
+
+---
+
+## Logging Middleware Usage
+
+```javascript
+await Log(
+  "backend",
+  "info",
+  "cache",
+  "Notification served from Redis cache"
+);
+
+await Log(
+  "backend",
+  "info",
+  "service",
+  "WebSocket notification delivered"
+);
+```
