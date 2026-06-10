@@ -177,3 +177,200 @@ await Log(
   "Notification not found"
 );
 ```
+
+
+
+
+
+
+
+# Stage 2
+
+## Database Choice
+
+I recommend PostgreSQL because:
+
+- ACID compliant
+- Reliable and scalable
+- Supports indexing
+- Supports pagination efficiently
+- Suitable for notification systems
+
+---
+
+## Database Schema
+
+### notifications
+
+```sql
+CREATE TABLE notifications (
+    notification_id UUID PRIMARY KEY,
+    recipient_id VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    status VARCHAR(20) DEFAULT 'UNREAD',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+---
+
+## Indexes
+
+```sql
+CREATE INDEX idx_recipient
+ON notifications(recipient_id);
+
+CREATE INDEX idx_status
+ON notifications(status);
+
+CREATE INDEX idx_created_at
+ON notifications(created_at);
+```
+
+---
+
+## Queries
+
+### Create Notification
+
+```sql
+INSERT INTO notifications(
+notification_id,
+recipient_id,
+title,
+message,
+type
+)
+VALUES (
+gen_random_uuid(),
+'12345',
+'Placement Drive',
+'Microsoft drive starts tomorrow',
+'PLACEMENT'
+);
+```
+
+---
+
+### Get All Notifications
+
+```sql
+SELECT *
+FROM notifications
+ORDER BY created_at DESC;
+```
+
+---
+
+### Get Notification By ID
+
+```sql
+SELECT *
+FROM notifications
+WHERE notification_id='notif_001';
+```
+
+---
+
+### Mark As Read
+
+```sql
+UPDATE notifications
+SET status='READ'
+WHERE notification_id='notif_001';
+```
+
+---
+
+### Delete Notification
+
+```sql
+DELETE FROM notifications
+WHERE notification_id='notif_001';
+```
+
+---
+
+### Get Unread Notifications
+
+```sql
+SELECT *
+FROM notifications
+WHERE status='UNREAD'
+ORDER BY created_at DESC;
+```
+
+---
+
+## Scaling Challenges
+
+### Problem 1: Slow Queries
+
+As notification count increases, searches become slower.
+
+Solution:
+
+- Create indexes
+- Use pagination
+
+---
+
+### Problem 2: Large Table Size
+
+Millions of notifications increase storage and query time.
+
+Solution:
+
+- Partition tables by date
+- Archive old notifications
+
+---
+
+### Problem 3: High Read Traffic
+
+Many users fetching notifications simultaneously.
+
+Solution:
+
+- Redis caching
+- Read replicas
+
+---
+
+### Pagination Query
+
+```sql
+SELECT *
+FROM notifications
+ORDER BY created_at DESC
+LIMIT 20 OFFSET 0;
+```
+
+---
+
+## Logging Middleware Usage
+
+```javascript
+await Log(
+  "backend",
+  "info",
+  "db",
+  "Notification stored successfully"
+);
+
+await Log(
+  "backend",
+  "info",
+  "db",
+  "Notification fetched successfully"
+);
+
+await Log(
+  "backend",
+  "error",
+  "db",
+  "Database query failed"
+);
+```
