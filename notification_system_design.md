@@ -689,3 +689,158 @@ await Log(
   "WebSocket notification delivered"
 );
 ```
+
+
+
+
+# Stage 5
+
+## Problems With Current Implementation
+
+Current implementation:
+
+```python
+for student_id in student_ids:
+    send_email(student_id, message)
+    save_to_db(student_id, message)
+    push_to_app(student_id, message)
+```
+
+Issues:
+
+1. Sequential processing is slow for 50,000 students.
+2. Email failure can stop processing.
+3. No retry mechanism.
+4. No fault tolerance.
+5. Database and email operations are tightly coupled.
+6. Difficult to recover from partial failures.
+
+---
+
+## What Happens If 200 Emails Fail?
+
+The notification should still exist in the database.
+
+Users should still receive in-app notifications.
+
+Failed emails should be retried automatically.
+
+---
+
+## Recommended Architecture
+
+HR Action
+↓
+Notification Service
+↓
+Message Queue (Kafka/RabbitMQ)
+↓
+Workers
+
+Workers:
+
+- Email Worker
+- Database Worker
+- Push Notification Worker
+
+Each worker processes tasks independently.
+
+---
+
+## Should DB Save And Email Sending Happen Together?
+
+No.
+
+Reasons:
+
+- Email is an external dependency.
+- Email providers may be slow or unavailable.
+- Database write should not wait for email delivery.
+- Better reliability and scalability.
+
+Database save should happen first.
+
+Email delivery should be asynchronous.
+
+---
+
+## Improved Pseudocode
+
+```python
+function notify_all(student_ids, message):
+
+    notification_id = create_notification(message)
+
+    for student_id in student_ids:
+
+        save_to_db(student_id, notification_id)
+
+        queue.publish(
+            "notification_jobs",
+            {
+                "student_id": student_id,
+                "notification_id": notification_id
+            }
+        )
+```
+
+Email Worker:
+
+```python
+while True:
+
+    job = queue.consume()
+
+    try:
+        send_email(job.student_id)
+    except:
+        retry(job)
+```
+
+Push Worker:
+
+```python
+while True:
+
+    job = queue.consume()
+
+    push_to_app(job.student_id)
+```
+
+---
+
+## Benefits
+
+- High scalability
+- Retry support
+- Fault tolerance
+- Faster execution
+- Independent services
+- Easier monitoring
+
+---
+
+## Logging Middleware Usage
+
+```javascript
+await Log(
+  "backend",
+  "info",
+  "service",
+  "Bulk notification job started"
+);
+
+await Log(
+  "backend",
+  "warn",
+  "service",
+  "Email delivery failed, retry scheduled"
+);
+
+await Log(
+  "backend",
+  "info",
+  "service",
+  "Bulk notification completed"
+);
+```
