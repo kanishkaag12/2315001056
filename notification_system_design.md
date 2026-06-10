@@ -844,3 +844,49 @@ await Log(
   "Bulk notification completed"
 );
 ```
+
+
+
+# Stage 6
+
+## Priority Formula
+
+Priority Score = Weight × 100 − AgeInHours
+
+Weights:
+
+- Placement = 3
+- Result = 2
+- Event = 1
+
+Notifications are ranked by score and the top 10 are displayed.
+
+## Efficient Top-N Maintenance
+
+Use a Min Heap of size N.
+
+Complexities:
+
+- Insert: O(log N)
+- Retrieve Top N: O(N)
+
+Advantages:
+
+- Avoids sorting the complete dataset repeatedly.
+- Scales efficiently for large notification volumes.
+
+## Error Encountered
+
+The notification retrieval endpoint returned:
+
+```json
+{
+  "message": "invalid authorization token"
+}
+```
+
+even when using a freshly generated access token from the authentication API.
+
+The ranking logic was implemented, but the external API could not be queried successfully due to authorization issues.
+```
+
