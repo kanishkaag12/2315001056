@@ -374,3 +374,151 @@ await Log(
   "Database query failed"
 );
 ```
+
+
+
+
+
+# Stage 3
+
+## Analysis of Existing Query
+
+```sql
+SELECT *
+FROM notifications
+WHERE studentID = 1042
+AND isRead = false
+ORDER BY createdAt ASC;
+```
+
+### Is the Query Correct?
+
+Yes, it correctly fetches unread notifications for a student ordered by creation time.
+
+---
+
+### Why Is It Slow?
+
+Database size:
+
+- 50,000 students
+- 5,000,000 notifications
+
+Without indexes, the database performs a full table scan.
+
+Complexity:
+
+```text
+O(N)
+```
+
+where N = 5,000,000 rows.
+
+Sorting also adds additional cost.
+
+---
+
+## Recommended Improvement
+
+Create a composite index:
+
+```sql
+CREATE INDEX idx_student_unread_created
+ON notifications(studentID, isRead, createdAt);
+```
+
+Optimized query:
+
+```sql
+SELECT *
+FROM notifications
+WHERE studentID = 1042
+AND isRead = false
+ORDER BY createdAt ASC;
+```
+
+### Expected Cost
+
+Without index:
+
+```text
+O(N)
+```
+
+With index:
+
+```text
+O(log N)
+```
+
+plus retrieval cost of matching rows.
+
+---
+
+## Should We Add Indexes On Every Column?
+
+No.
+
+Problems:
+
+- Increased storage usage
+- Slower INSERT operations
+- Slower UPDATE operations
+- More index maintenance overhead
+
+Indexes should only be created on:
+
+- Frequently filtered columns
+- JOIN columns
+- Sorting columns
+
+---
+
+## Query: Students Who Received Placement Notifications In Last 7 Days
+
+```sql
+SELECT DISTINCT studentID
+FROM notifications
+WHERE notificationType = 'Placement'
+AND createdAt >= NOW() - INTERVAL '7 DAYS';
+```
+
+For MySQL:
+
+```sql
+SELECT DISTINCT studentID
+FROM notifications
+WHERE notificationType = 'Placement'
+AND createdAt >= NOW() - INTERVAL 7 DAY;
+```
+
+---
+
+## Additional Optimization
+
+For very large datasets:
+
+- Table partitioning by date
+- Redis caching
+- Archiving old notifications
+- Read replicas
+
+---
+
+## Logging Middleware Usage
+
+```javascript
+await Log(
+  "backend",
+  "info",
+  "db",
+  "Optimized notification query executed"
+);
+
+await Log(
+  "backend",
+  "warn",
+  "db",
+  "Slow query detected"
+);
+```
